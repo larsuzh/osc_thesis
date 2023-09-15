@@ -114,7 +114,7 @@ def train(args):
     model_file = f"{results_dir}/{args.approach}.model"
     results_dir.mkdir(parents=True, exist_ok=True)
 
-    net = networks.__dict__[args.arch](network_type=args.net_type, bias= args.approach == "regular")
+    net = networks.__dict__[args.arch](network_type=args.net_type, bias= args.net_type == "regular")
     net = tools.device(net)
     
     train_data_loader = torch.utils.data.DataLoader(

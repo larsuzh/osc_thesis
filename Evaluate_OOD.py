@@ -37,10 +37,10 @@ def command_line_options():
     return parser.parse_args()
 
 
-def load_network(args, which, net_type):
+def load_network(args, which, net_type, bias):
     network_file = f"{args.arch}/{net_type}/{which}/{which}.model"
     if os.path.exists(network_file):
-        net = networks.__dict__[args.arch](network_type=net_type, bias = False)
+        net = networks.__dict__[args.arch](network_type=net_type, bias = bias)
         net.load_state_dict(torch.load(network_file))
         tools.device(net)
         return net
@@ -80,8 +80,8 @@ if __name__ == '__main__':
     # networks = {
     #     which: load_network(args, which, args.net_type) for which in args.approaches
     # }
-    net = load_network(args, "Objectosphere", args.net_type)
-    ood_net = load_network(args, "OOD", args.net_type)
+    net = load_network(args, "Objectosphere", args.net_type, bias = args.net_type == "regular")
+    ood_net = load_network(args, "OOD", args.net_type, bias = True)
     print ("Evaluating OOD method")
     for which, net in networks.items():
         if net is None:
