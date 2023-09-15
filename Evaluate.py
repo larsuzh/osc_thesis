@@ -37,7 +37,7 @@ def command_line_options():
 
 
 
-def load_network(args, which, net_type):
+def load_network(args, which):
     network_file = f"{args.arch}/{args.net_type}/{which}/{which}.model"
     if os.path.exists(network_file):
         net = networks.__dict__[args.arch](network_type=args.net_type, bias = False)
@@ -72,7 +72,7 @@ if __name__ == '__main__':
 
     # networks
     networks = {
-        which: load_network(args, which, args.net_type) for which in args.approaches
+        which: load_network(args, which) for which in args.approaches
     }
 
     from Training import Dataset

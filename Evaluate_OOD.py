@@ -38,9 +38,9 @@ def command_line_options():
 
 
 def load_network(args, which, net_type):
-    network_file = f"{args.arch}/{args.net_type}/{which}/{which}.model"
+    network_file = f"{args.arch}/{net_type}/{which}/{which}.model"
     if os.path.exists(network_file):
-        net = networks.__dict__[args.arch](network_type=args.net_type, bias = False)
+        net = networks.__dict__[args.arch](network_type=net_type, bias = False)
         net.load_state_dict(torch.load(network_file))
         tools.device(net)
         return net
@@ -77,19 +77,19 @@ if __name__ == '__main__':
     test_set = Dataset(args.dataset_root, "test")
 
     results = {}
-    networks = {
-        which: load_network(args, which, args.net_type) for which in args.approaches
-    }
-    # FIXME
-    # ood_net = load_network(args, args.approaches[0], args.net_type)
+    # networks = {
+    #     which: load_network(args, which, args.net_type) for which in args.approaches
+    # }
+    net = load_network(args, "Objectosphere", args.net_type)
+    ood_net = load_network(args, "OOD", args.net_type)
     print ("Evaluating OOD method")
     for which, net in networks.items():
         if net is None:
             continue
         val_gt, val_predicted_sm = extract(val_set, net)
         test_gt, test_predicted_sm = extract(test_set, net)
-        _, val_predicted_bc = extract(val_set, net)
-        _, test_predicted_bc = extract(test_set, net)
+        _, val_predicted_bc = extract(val_set, ood_net)
+        _, test_predicted_bc = extract(test_set, ood_net)
 
         # compute probabilities
         val_predicted_sm = torch.nn.functional.softmax(torch.tensor(val_predicted_sm), dim=1).detach().numpy()
