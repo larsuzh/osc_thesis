@@ -77,41 +77,45 @@ if __name__ == '__main__':
     test_set = Dataset(args.dataset_root, "test")
 
     results = {}
-    # networks = {
-    #     which: load_network(args, which, args.net_type) for which in args.approaches
-    # }
-    net = load_network(args, "Objectosphere", args.net_type, bias = args.net_type == "regular")
     ood_net = load_network(args, "OOD", args.net_type, bias = True)
-    print ("Evaluating OOD method")
+    networks = {
+        which: load_network(args, which, args.net_type, bias = args.net_type == "regular") for which in args.approaches
+    }
 
-    val_gt, val_predicted_sm = extract(val_set, net)
-    test_gt, test_predicted_sm = extract(test_set, net)
-    _, val_predicted_bc = extract(val_set, ood_net)
-    _, test_predicted_bc = extract(test_set, ood_net)
+    results = {}
+    for which, net in networks.items():
+        if net is None:
+            continue
+        print ("Evaluating OOD method")
 
-    # compute probabilities
-    val_predicted_sm = torch.nn.functional.softmax(torch.tensor(val_predicted_sm), dim=1).detach().numpy()
-    test_predicted_sm  = torch.nn.functional.softmax(torch.tensor(test_predicted_sm), dim=1).detach().numpy()
-    val_predicted_bc = torch.sigmoid(torch.tensor(val_predicted_bc)).detach().numpy()
-    test_predicted_bc = torch.sigmoid(torch.tensor(test_predicted_bc)).detach().numpy()
+        val_gt, val_predicted_sm = extract(val_set, net)
+        test_gt, test_predicted_sm = extract(test_set, net)
+        _, val_predicted_bc = extract(val_set, ood_net)
+        _, test_predicted_bc = extract(test_set, ood_net)
 
-    # vary thresholds
-    ccr, fprv, fprt = [], [], []
-    positives = val_predicted_sm[val_gt != -1] * val_predicted_bc[val_gt != -1]
-    val = val_predicted_sm[val_gt == -1] * val_predicted_bc[val_gt == -1]
-    test = test_predicted_sm[test_gt == -1] * val_predicted_bc[val_gt == -1]
-    gt = val_gt[val_gt != -1]
-    for tau in sorted(positives[range(len(gt)),gt]):
-        # correct classification rate
-        ccr.append(numpy.sum(numpy.logical_and(
-            numpy.argmax(positives, axis=1) == gt,
-            positives[range(len(gt)),gt] >= tau
-        )) / len(positives))
-        # false positive rate for validation and test set
-        fprv.append(numpy.sum(numpy.max(val, axis=1) >= tau) / len(val))
-        fprt.append(numpy.sum(numpy.max(test, axis=1) >= tau) / len(test))
+        # compute probabilities
+        val_predicted_sm = torch.nn.functional.softmax(torch.tensor(val_predicted_sm), dim=1).detach().numpy()
+        test_predicted_sm  = torch.nn.functional.softmax(torch.tensor(test_predicted_sm), dim=1).detach().numpy()
+        val_predicted_bc = torch.sigmoid(torch.tensor(val_predicted_bc)).detach().numpy()
+        test_predicted_bc = torch.sigmoid(torch.tensor(test_predicted_bc)).detach().numpy()
 
-    results["objectosphere-ood"] = (ccr, fprv, fprt)
+        # vary thresholds
+        ccr, fprv, fprt = [], [], []
+        positives = val_predicted_sm[val_gt != -1] * val_predicted_bc[val_gt != -1]
+        val = val_predicted_sm[val_gt == -1] * val_predicted_bc[val_gt == -1]
+        test = test_predicted_sm[test_gt == -1] * val_predicted_bc[val_gt == -1]
+        gt = val_gt[val_gt != -1]
+        for tau in sorted(positives[range(len(gt)),gt]):
+            # correct classification rate
+            ccr.append(numpy.sum(numpy.logical_and(
+                numpy.argmax(positives, axis=1) == gt,
+                positives[range(len(gt)),gt] >= tau
+            )) / len(positives))
+            # false positive rate for validation and test set
+            fprv.append(numpy.sum(numpy.max(val, axis=1) >= tau) / len(val))
+            fprt.append(numpy.sum(numpy.max(test, axis=1) >= tau) / len(test))
+
+        results[which] = (ccr, fprv, fprt)
 
     pdf = PdfPages(args.plot)
 
@@ -119,7 +123,7 @@ if __name__ == '__main__':
         # plot with known unknowns (letters 1:13)
         pyplot.figure()
         for which, res in results.items():
-            pyplot.semilogx(res[1], res[0], label="objectosphere-ood")
+            pyplot.semilogx(res[1], res[0], label=labels[which])
         pyplot.legend()
         pyplot.xlabel("False Positive Rate")
         pyplot.ylabel("Correct Classification Rate")
@@ -130,7 +134,7 @@ if __name__ == '__main__':
         # plot with unknown unknowns (letters 14:26)
         pyplot.figure()
         for which, res in results.items():
-            pyplot.semilogx(res[2], res[0], label="objectosphere-ood")
+            pyplot.semilogx(res[2], res[0], label=labels[which])
         pyplot.legend()
         pyplot.xlabel("False Positive Rate")
         pyplot.ylabel("Correct Classification Rate")
