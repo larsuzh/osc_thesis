@@ -11,7 +11,6 @@ from matplotlib.backends.backend_pdf import PdfPages
 
 labels={
   "SoftMax" : "Plain SoftMax",
-  "Garbage" : "Garbage Class",
   "EOS" : "Entropic Open-Set",
   "Objectosphere" : "Objectosphere"
 }

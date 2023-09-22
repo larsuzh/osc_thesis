@@ -1,7 +1,6 @@
 import torch
 import torchvision
 import torchvision.transforms as transforms
-from torch.utils.tensorboard import SummaryWriter
 from torch.nn import functional as F
 import torch.nn as nn
 import torch.optim as optim
@@ -107,6 +106,7 @@ def get_loss_functions(args):
 
 def train(args):
     torch.manual_seed(0)
+    is_ood = args.approach == "OOD"
 
     first_loss_func,second_loss_func,training_data,validation_data = list(zip(*get_loss_functions(args).items()))[-1]
 
@@ -114,7 +114,7 @@ def train(args):
     model_file = f"{results_dir}/{args.approach}.model"
     results_dir.mkdir(parents=True, exist_ok=True)
 
-    net = networks.__dict__[args.arch](network_type=args.net_type, bias= args.net_type == "regular")
+    net = networks.__dict__[args.arch](network_type=args.net_type, num_classes = 1 if is_ood else 10, bias= is_ood or args.net_type == "regular")
     net = tools.device(net)
     
     train_data_loader = torch.utils.data.DataLoader(
@@ -134,9 +134,6 @@ def train(args):
         optimizer = optim.Adam(net.parameters(), lr=args.lr)
     elif args.solver == 'sgd':
         optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9)
-
-    logs_dir = results_dir/'Logs'
-    writer = SummaryWriter(logs_dir)
 
     # train network
     prev_confidence = None
@@ -151,21 +148,29 @@ def train(args):
             y = tools.device(y)
             optimizer.zero_grad()
             logits, features = net(x)
+            if is_ood:
+                y = y.unsqueeze(1).float()
             loss = first_loss_func(logits, y) + args.second_loss_weight * second_loss_func(features, y) + args.negative_penalty_weight * negative_penalty(net.single_fc.weight)
 
             # metrics on training set
-            train_accuracy += train_metrics.accuracy(logits, y)
-            train_confidence += train_metrics.confidence(logits, y)
-            if args.approach not in ("SoftMax"):
+            train_accuracy += train_metrics.accuracy(logits, y, is_ood = is_ood)
+            train_confidence += train_metrics.confidence(logits, y, is_ood = is_ood)
+            if args.approach not in ("SoftMax", "OOD"):
                 train_magnitude += train_metrics.sphere(features, y, args.Minimum_Knowns_Magnitude if args.approach in args.approach == "Objectosphere" else None)
 
-            loss_history.extend(loss.tolist())
+            if is_ood:
+                loss_history.append(loss.item())
+            else:
+                loss_history.extend(loss.tolist())
             loss.mean().backward()
             optimizer.step()
 
         # metrics on validation set
         with torch.no_grad():
-            val_loss = torch.zeros(2, dtype=float)
+            if is_ood:
+                val_loss_history = []
+            else:
+                val_loss = torch.zeros(2, dtype=float)
             val_accuracy = torch.zeros(2, dtype=int)
             val_magnitude = torch.zeros(2, dtype=float)
             val_confidence = torch.zeros(2, dtype=float)
@@ -174,24 +179,23 @@ def train(args):
                 x = tools.device(x)
                 y = tools.device(y)
                 outputs = net(x)
+                if is_ood:
+                    y = y.unsqueeze(1).float()
 
                 loss = first_loss_func(outputs[0], y) + args.second_loss_weight * second_loss_func(outputs[1], y) + args.negative_penalty_weight * negative_penalty(net.single_fc.weight)
-                val_loss += torch.tensor((torch.sum(loss), len(loss)))
-                val_accuracy += train_metrics.accuracy(outputs[0], y)
-                val_confidence += train_metrics.confidence(outputs[0], y)
-                if args.approach not in ("SoftMax"):
+                if is_ood:
+                    val_loss_history.append(loss.item())
+                else:
+                    val_loss += torch.tensor((torch.sum(loss), len(loss)))
+                val_accuracy += train_metrics.accuracy(outputs[0], y, is_ood = is_ood)
+                val_confidence += train_metrics.confidence(outputs[0], y, is_ood = is_ood)
+                if args.approach not in ("SoftMax", "OOD"):
                     val_magnitude += train_metrics.sphere(outputs[1], y, args.Minimum_Knowns_Magnitude if args.approach == "Objectosphere" else None)
 
         # log statistics
         epoch_running_loss = torch.mean(torch.tensor(loss_history))
-        writer.add_scalar('Loss/train', epoch_running_loss, epoch)
-        writer.add_scalar('Loss/val', val_loss[0] / val_loss[1], epoch)
-        writer.add_scalar('Acc/train', float(train_accuracy[0]) / float(train_accuracy[1]), epoch)
-        writer.add_scalar('Acc/val', float(val_accuracy[0]) / float(val_accuracy[1]), epoch)
-        writer.add_scalar('Conf/train', float(train_confidence[0]) / float(train_confidence[1]), epoch)
-        writer.add_scalar('Conf/val', float(val_confidence[0]) / float(val_confidence[1]), epoch)
-        writer.add_scalar('Mag/train', train_magnitude[0] / train_magnitude[1] if train_magnitude[1] else 0, epoch)
-        writer.add_scalar('Mag/val', val_magnitude[0] / val_magnitude[1], epoch)
+        if is_ood:
+            epoch_running_val_loss = torch.mean(torch.tensor(val_loss_history))
 
         # save network based on confidence metric of validation set
         save_status = "NO"
@@ -201,127 +205,17 @@ def train(args):
             save_status = "YES"
 
         # print some statistics
+        val_loss_to_print = epoch_running_val_loss if is_ood else float(val_loss[0]) / float(val_loss[1])
         print(f"Epoch {epoch} "
               f"train loss {epoch_running_loss:.10f} "
               f"accuracy {float(train_accuracy[0]) / float(train_accuracy[1]):.5f} "
               f"confidence {train_confidence[0] / train_confidence[1]:.5f} "
               f"magnitude {train_magnitude[0] / train_magnitude[1] if train_magnitude[1] else -1:.5f} -- "
-              f"val loss {float(val_loss[0]) / float(val_loss[1]):.10f} "
+              f"val loss {val_loss_to_print:.10f} "
               f"accuracy {float(val_accuracy[0]) / float(val_accuracy[1]):.5f} "
               f"confidence {val_confidence[0] / val_confidence[1]:.5f} "
               f"magnitude {val_magnitude[0] / val_magnitude[1] if val_magnitude[1] else -1:.5f} -- "
               f"Saving Model {save_status}")
-        
-def train_ood(args):
-    torch.manual_seed(0)
-
-    first_loss_func,_,training_data,validation_data = list(zip(*get_loss_functions(args).items()))[-1]
-
-    results_dir = pathlib.Path(f"{args.arch}/{args.net_type}/{args.approach}")
-    model_file = f"{results_dir}/{args.approach}.model"
-    results_dir.mkdir(parents=True, exist_ok=True)
-
-    net = networks.__dict__[args.arch](network_type=args.net_type, num_classes = 1, bias=True)
-    net = tools.device(net)
-    
-    train_data_loader = torch.utils.data.DataLoader(
-        training_data,
-        batch_size=args.Batch_Size,
-        shuffle=True,
-        num_workers=5,
-        pin_memory=True
-    )
-    val_data_loader = torch.utils.data.DataLoader(
-        validation_data,
-        batch_size=args.Batch_Size,
-        pin_memory=True
-    )
-
-    if args.solver == 'adam':
-        optimizer = optim.Adam(net.parameters(), lr=args.lr)
-    elif args.solver == 'sgd':
-        optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9)
-
-    logs_dir = results_dir/'Logs'
-    writer = SummaryWriter(logs_dir)
-
-    # train network
-    prev_confidence = None
-    for epoch in range(1, args.no_of_epochs + 1, 1):  # loop over the dataset multiple times
-        loss_history = []
-        val_loss_history = []
-        train_accuracy = torch.zeros(2, dtype=int)
-        # train_magnitude = torch.zeros(2, dtype=float)
-        train_confidence = torch.zeros(2, dtype=float)
-        net.train()
-        for x, y in train_data_loader:
-            x = tools.device(x)
-            y = tools.device(y)
-            optimizer.zero_grad()
-            logits, features = net(x)
-            y = y.unsqueeze(1).float()
-            loss = first_loss_func(logits, y) + args.negative_penalty_weight * negative_penalty(net.single_fc.weight)
-
-            # metrics on training set
-            train_accuracy += train_metrics.accuracy(logits, y, is_ood=True)
-            train_confidence += train_metrics.confidence(logits, y, is_ood=True)
-            # if args.approach not in ("SoftMax", "Garbage"):
-            #     train_magnitude += losses.sphere(features, y, args.Minimum_Knowns_Magnitude if args.approach in args.approach == "Objectosphere" else None)
-
-            loss_history.append(loss.item())
-            loss.mean().backward()
-            optimizer.step()
-
-        # metrics on validation set
-        with torch.no_grad():
-            val_accuracy = torch.zeros(2, dtype=int)
-            # val_magnitude = torch.zeros(2, dtype=float)
-            val_confidence = torch.zeros(2, dtype=float)
-            net.eval()
-            for x,y in val_data_loader:
-                x = tools.device(x)
-                y = tools.device(y)
-                outputs = net(x)
-                y = y.unsqueeze(1).float()
-
-                loss = first_loss_func(outputs[0], y) + args.negative_penalty_weight * negative_penalty(net.single_fc.weight)
-                val_loss_history.append(loss.item())
-                val_accuracy += train_metrics.accuracy(outputs[0], y, is_ood=True)
-                val_confidence += train_metrics.confidence(outputs[0], y, is_ood=True)
-                # if args.approach not in ("SoftMax", "Garbage"):
-                #     val_magnitude += losses.sphere(outputs[1], y, args.Minimum_Knowns_Magnitude if args.approach == "Objectosphere" else None)
-
-        # log statistics
-        epoch_running_loss = torch.mean(torch.tensor(loss_history))
-        epoch_running_val_loss = torch.mean(torch.tensor(val_loss_history))
-        writer.add_scalar('Loss/train', epoch_running_loss, epoch)
-        writer.add_scalar('Loss/val', epoch_running_val_loss, epoch)
-        writer.add_scalar('Acc/train', float(train_accuracy[0]) / float(train_accuracy[1]), epoch)
-        writer.add_scalar('Acc/val', float(val_accuracy[0]) / float(val_accuracy[1]), epoch)
-        writer.add_scalar('Conf/train', float(train_confidence[0]) / float(train_confidence[1]), epoch)
-        writer.add_scalar('Conf/val', float(val_confidence[0]) / float(val_confidence[1]), epoch)
-        # writer.add_scalar('Mag/train', train_magnitude[0] / train_magnitude[1] if train_magnitude[1] else 0, epoch)
-        # writer.add_scalar('Mag/val', val_magnitude[0] / val_magnitude[1], epoch)
-
-        # save network based on confidence metric of validation set
-        save_status = "NO"
-        if prev_confidence is None or (val_confidence[0] > prev_confidence):
-            torch.save(net.state_dict(), model_file)
-            prev_confidence = val_confidence[0]
-            save_status = "YES"
-
-        # print some statistics
-        print(f"Epoch {epoch} "
-              f"train loss {epoch_running_loss:.10f} "
-              f"accuracy {float(train_accuracy[0]) / float(train_accuracy[1]):.5f} "
-              f"confidence {train_confidence[0] / train_confidence[1]:.5f} "
-            #   f"magnitude {train_magnitude[0] / train_magnitude[1] if train_magnitude[1] else -1:.5f} -- "
-              f"val loss {epoch_running_val_loss:.10f} "
-              f"accuracy {float(val_accuracy[0]) / float(val_accuracy[1]):.5f} "
-              f"confidence {val_confidence[0] / val_confidence[1]:.5f} "
-            #   f"magnitude {val_magnitude[0] / val_magnitude[1] if val_magnitude[1] else -1:.5f} -- "
-              f"Saving Model {save_status}"
-        )
 
 
 if __name__ == "__main__":
@@ -333,7 +227,4 @@ if __name__ == "__main__":
         print("Running in CPU mode, training might be slow")
         tools.set_device_cpu()
     
-    if args.approach != "OOD":
-        train(args)
-    else:
-        train_ood(args)
+    train(args)
