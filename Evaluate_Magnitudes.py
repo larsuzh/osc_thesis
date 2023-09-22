@@ -1,12 +1,10 @@
 import torch
-import numpy
-import os
 import sys
-from vast import tools
-import Networks
-
 import matplotlib
 matplotlib.rcParams["font.size"] = 18
+
+from vast import tools
+from Evaluate_Util import extract_features, load_network
 from matplotlib import pyplot
 from matplotlib.backends.backend_pdf import PdfPages
 
@@ -26,30 +24,6 @@ def command_line_options():
 
     return parser.parse_args()
 
-
-def load_network(args):
-    network_file = f"{args.arch}/{args.net_type}/{args.approach}/{args.approach}.model"
-    if os.path.exists(network_file):
-        net = Networks.__dict__[args.arch](network_type=args.net_type, num_classes = 1 if args.approach == "OOD" else 10, bias = args.approach == "OOD" or args.net_type == "regular")
-        net.load_state_dict(torch.load(network_file))
-        tools.device(net)
-        return net
-    else:
-        return None
-
-def extract_features(dataset, net):
-    gt, features = [], []
-    data_loader = torch.utils.data.DataLoader(dataset, batch_size=2048, shuffle=False)
-
-    with torch.no_grad():
-        for (x, y) in data_loader:
-            gt.extend(y.tolist())
-            logs, feat = net(tools.device(x))
-            features.extend(feat.tolist())
-
-    return numpy.array(gt), numpy.array(features)
-
-
 if __name__ == '__main__':
 
     args = command_line_options()
@@ -59,7 +33,7 @@ if __name__ == '__main__':
         print("Running in CPU mode, might be slow")
         tools.set_device_cpu()
 
-    net = load_network(args)
+    net = load_network(args.arch, args.approach, args.net_type)
 
     from Training import Dataset
 

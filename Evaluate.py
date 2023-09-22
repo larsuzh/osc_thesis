@@ -1,13 +1,8 @@
 import torch
 import numpy
-import os
-from vast import tools
-import Networks
 
-import matplotlib
-matplotlib.rcParams["font.size"] = 18
-from matplotlib import pyplot, patches
-from matplotlib.backends.backend_pdf import PdfPages
+from vast import tools
+from Evaluate_Util import extract, load_network, writeOSCRCurve
 
 labels={
   "SoftMax" : "Plain SoftMax",
@@ -32,31 +27,6 @@ def command_line_options():
 
     return parser.parse_args()
 
-
-
-def load_network(args, which):
-    network_file = f"{args.arch}/{args.net_type}/{which}/{which}.model"
-    if os.path.exists(network_file):
-        net = Networks.__dict__[args.arch](network_type=args.net_type, bias = args.net_type == "regular")
-        net.load_state_dict(torch.load(network_file))
-        tools.device(net)
-        return net
-    else:
-        return None
-
-def extract(dataset, net):
-    gt, logits = [], []
-    data_loader = torch.utils.data.DataLoader(dataset, batch_size=2048, shuffle=False)
-
-    with torch.no_grad():
-        for (x, y) in data_loader:
-            gt.extend(y.tolist())
-            logs, feat = net(tools.device(x))
-            logits.extend(logs.tolist())
-
-    return numpy.array(gt), numpy.array(logits)
-
-
 if __name__ == '__main__':
 
     args = command_line_options()
@@ -73,7 +43,7 @@ if __name__ == '__main__':
 
     results = {}
     trained_networks = {
-        which: load_network(args, which) for which in args.approaches
+        which: load_network(args.arch, which, args.net_type) for which in args.approaches
     }
 
     for which, net in trained_networks.items():
@@ -110,32 +80,5 @@ if __name__ == '__main__':
             fprt.append(numpy.sum(numpy.max(test, axis=1) >= tau) / len(test))
 
         results[which] = (ccr, fprv, fprt)
-
-    pdf = PdfPages("Evaluation/" + args.plot)
-
-    try:
-        # plot with known unknowns (letters 1:13)
-        pyplot.figure()
-        for which, res in results.items():
-            pyplot.semilogx(res[1], res[0], label=labels[which])
-        pyplot.legend()
-        pyplot.xlabel("False Positive Rate")
-        pyplot.ylabel("Correct Classification Rate")
-        pyplot.title("Negative Set")
-        pyplot.tight_layout()
-        pdf.savefig(bbox_inches='tight', pad_inches=0)
-
-        # plot with unknown unknowns (letters 14:26)
-        pyplot.figure()
-        for which, res in results.items():
-            pyplot.semilogx(res[2], res[0], label=labels[which])
-        pyplot.legend()
-        pyplot.xlabel("False Positive Rate")
-        pyplot.ylabel("Correct Classification Rate")
-        pyplot.title("Unknown Set")
-        pyplot.tight_layout()
-        pdf.savefig(bbox_inches='tight', pad_inches=0)
-
-    finally:
-        print("Wrote", args.plot)
-        pdf.close()
+        
+    writeOSCRCurve(results, labels, args.plot)
