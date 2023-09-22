@@ -15,26 +15,22 @@ def command_line_options():
 
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        description='This is the evaluation script for all MNIST experiments. \
-                    Where applicable roman letters are used as Known Unknowns. \
-                    During training model with best performance on validation set in the no_of_epochs is used.'
     )
 
     parser.add_argument("--approach", choices=['SoftMax', 'OOD', 'EOS', 'Objectosphere'])
     parser.add_argument("--arch", default='LeNet_pp', choices=['LeNet', 'LeNet_pp'])
     parser.add_argument("--net_type", default='regular', choices=['regular', 'single_fc', 'single_fc_poslin'])
     parser.add_argument("--dataset_root", "-d", default ="/tmp", help="Select the directory where datasets are stored.")
-    parser.add_argument("--plot", "-p", default="Evaluate_Magnitude.pdf", help = "Where to write results into")
+    parser.add_argument("--plot", "-p", default="Evaluate_Magnitudes.pdf", help = "Where to write results into")
     parser.add_argument("--gpu", "-g", type=int, nargs="?", const=0, help="If selected, the experiment is run on GPU. You can also specify a GPU index")
 
     return parser.parse_args()
 
 
-
 def load_network(args):
     network_file = f"{args.arch}/{args.net_type}/{args.approach}/{args.approach}.model"
     if os.path.exists(network_file):
-        net = networks.__dict__[args.arch](network_type=args.net_type, bias = args.approach == "OOD" or args.net_type == "regular")
+        net = networks.__dict__[args.arch](network_type=args.net_type, num_classes = 1 if args.approach == "OOD" else 10, bias = args.approach == "OOD" or args.net_type == "regular")
         net.load_state_dict(torch.load(network_file))
         tools.device(net)
         return net
@@ -67,9 +63,7 @@ if __name__ == '__main__':
 
     from Training import Dataset
 
-    # negative set
     val_set = Dataset(args.dataset_root, "validation")
-    # unknown set
     test_set = Dataset(args.dataset_root, "test")
 
     if net is None:
@@ -78,18 +72,16 @@ if __name__ == '__main__':
     val_gt, val_features = extract_features(val_set, net)
     val_positives = val_features[val_gt >= 0]
     val_negatives = val_features[val_gt < 0]
-    val_magnitudes_positives = [round(sum(x ** 2 for x in sublist)/len(val_positives), 3) for sublist in val_positives]
-    val_magnitudes_negatives = [round(sum(x ** 2 for x in sublist)/len(val_negatives), 3) for sublist in val_negatives]
-
+    val_magnitudes_positives = [round(sum(feature ** 2 for feature in features)/len(features), 3) for features in val_positives] # FIXME try using mean because sublist might be featuremap and not vector
+    val_magnitudes_negatives = [round(sum(feature ** 2 for feature in features)/len(features), 3) for features in val_negatives]
 
     test_gt, test_features = extract_features(test_set, net)
     test_positives = test_features[test_gt >= 0]
     test_negatives = test_features[test_gt < 0]
-    test_magnitudes_positives = [round(sum(x ** 2 for x in sublist)/len(test_positives), 3) for sublist in test_positives]
-    test_magnitudes_negatives = [round(sum(x ** 2 for x in sublist)/len(test_negatives), 3) for sublist in test_negatives]
+    test_magnitudes_positives = [round(sum(feature ** 2 for feature in features)/len(features), 3) for features in test_positives]
+    test_magnitudes_negatives = [round(sum(feature ** 2 for feature in features)/len(features), 3) for features in test_negatives]
 
-
-    pdf = PdfPages(args.plot)
+    pdf = PdfPages("Evaluation/" + args.plot)
 
     try:
         pyplot.figure()

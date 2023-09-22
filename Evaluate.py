@@ -21,9 +21,6 @@ def command_line_options():
 
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        description='This is the evaluation script for all MNIST experiments. \
-                    Where applicable roman letters are used as Known Unknowns. \
-                    During training model with best performance on validation set in the no_of_epochs is used.'
     )
 
     parser.add_argument("--approaches", "-a", nargs="+", default=list(labels.keys()), choices=list(labels.keys()), help = "Select the approaches to evaluate; non-existing models will automatically be skipped")
@@ -69,21 +66,17 @@ if __name__ == '__main__':
         print("Running in CPU mode, might be slow")
         tools.set_device_cpu()
 
-
-    # networks
-    networks = {
-        which: load_network(args, which) for which in args.approaches
-    }
-
     from Training import Dataset
 
-    # negative set
     val_set = Dataset(args.dataset_root, "validation")
-    # unknown set
     test_set = Dataset(args.dataset_root, "test")
 
     results = {}
-    for which, net in networks.items():
+    trained_networks = {
+        which: load_network(args, which) for which in args.approaches
+    }
+
+    for which, net in trained_networks.items():
         if net is None:
             continue
         print ("Evaluating", which)
@@ -118,7 +111,7 @@ if __name__ == '__main__':
 
         results[which] = (ccr, fprv, fprt)
 
-    pdf = PdfPages(args.plot)
+    pdf = PdfPages("Evaluation/" + args.plot)
 
     try:
         # plot with known unknowns (letters 1:13)
