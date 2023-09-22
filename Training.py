@@ -7,9 +7,9 @@ import torch.optim as optim
 
 
 from vast import tools, losses
-import train_metrics
-import networks
-from penalties import negative_penalty
+import Metrics
+import Networks
+from Penalties import negative_penalty
 
 import pathlib
 
@@ -114,7 +114,7 @@ def train(args):
     model_file = f"{results_dir}/{args.approach}.model"
     results_dir.mkdir(parents=True, exist_ok=True)
 
-    net = networks.__dict__[args.arch](network_type=args.net_type, num_classes = 1 if is_ood else 10, bias= is_ood or args.net_type == "regular")
+    net = Networks.__dict__[args.arch](network_type=args.net_type, num_classes = 1 if is_ood else 10, bias= is_ood or args.net_type == "regular")
     net = tools.device(net)
     
     train_data_loader = torch.utils.data.DataLoader(
@@ -153,10 +153,10 @@ def train(args):
             loss = first_loss_func(logits, y) + args.second_loss_weight * second_loss_func(features, y) + args.negative_penalty_weight * negative_penalty(net.single_fc.weight)
 
             # metrics on training set
-            train_accuracy += train_metrics.accuracy(logits, y, is_ood = is_ood)
-            train_confidence += train_metrics.confidence(logits, y, is_ood = is_ood)
+            train_accuracy += Metrics.accuracy(logits, y, is_ood = is_ood)
+            train_confidence += Metrics.confidence(logits, y, is_ood = is_ood)
             if args.approach not in ("SoftMax", "OOD"):
-                train_magnitude += train_metrics.sphere(features, y, args.Minimum_Knowns_Magnitude if args.approach in args.approach == "Objectosphere" else None)
+                train_magnitude += Metrics.sphere(features, y, args.Minimum_Knowns_Magnitude if args.approach in args.approach == "Objectosphere" else None)
 
             if is_ood:
                 loss_history.append(loss.item())
@@ -187,10 +187,10 @@ def train(args):
                     val_loss_history.append(loss.item())
                 else:
                     val_loss += torch.tensor((torch.sum(loss), len(loss)))
-                val_accuracy += train_metrics.accuracy(outputs[0], y, is_ood = is_ood)
-                val_confidence += train_metrics.confidence(outputs[0], y, is_ood = is_ood)
+                val_accuracy += Metrics.accuracy(outputs[0], y, is_ood = is_ood)
+                val_confidence += Metrics.confidence(outputs[0], y, is_ood = is_ood)
                 if args.approach not in ("SoftMax", "OOD"):
-                    val_magnitude += train_metrics.sphere(outputs[1], y, args.Minimum_Knowns_Magnitude if args.approach == "Objectosphere" else None)
+                    val_magnitude += Metrics.sphere(outputs[1], y, args.Minimum_Knowns_Magnitude if args.approach == "Objectosphere" else None)
 
         # log statistics
         epoch_running_loss = torch.mean(torch.tensor(loss_history))

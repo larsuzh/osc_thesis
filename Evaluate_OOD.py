@@ -2,7 +2,7 @@ import torch
 import numpy
 import os
 from vast import tools
-import networks
+import Networks
 
 import matplotlib
 matplotlib.rcParams["font.size"] = 18
@@ -36,7 +36,7 @@ def command_line_options():
 def load_network(args, which, net_type, bias):
     network_file = f"{args.arch}/{net_type}/{which}/{which}.model"
     if os.path.exists(network_file):
-        net = networks.__dict__[args.arch](network_type=net_type, num_classes = 1 if which == "OOD" else 10, bias = bias)
+        net = Networks.__dict__[args.arch](network_type=net_type, num_classes = 1 if which == "OOD" else 10, bias = bias)
         net.load_state_dict(torch.load(network_file))
         tools.device(net)
         return net
