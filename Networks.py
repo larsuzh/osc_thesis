@@ -2,7 +2,7 @@ import torch.nn as nn
 import torch
 
 class LeNet_pp(nn.Module):
-    def __init__(self, network_type="regular", num_classes=10, bias=True):
+    def __init__(self, network_type="regular", num_classes=10, bias=True, mixed=False):
         super(LeNet_pp, self).__init__()
         self.conv1_1 = nn.Conv2d(
             in_channels=1, out_channels=32, kernel_size=(5, 5), stride=1, padding=2
@@ -61,11 +61,25 @@ class LeNet_pp(nn.Module):
         self.single_fc_poslin = PosLinear(
             in_features=self.conv3_2.out_channels * 3 * 3, out_features=num_classes, input_bias=bias
             )
+        
+        if mixed:
+            self.fc2_ood = nn.Linear(
+                in_features=2, out_features=1, bias=True
+            )
+
+            self.single_fc_ood = nn.Linear(
+                in_features=self.conv3_2.out_channels * 3 * 3, out_features=1, bias=True
+            )
+
+            self.single_fc_poslin_ood = PosLinear(
+                in_features=self.conv3_2.out_channels * 3 * 3, out_features=1, input_bias=True
+            )
 
         self.prelu_act1 = nn.PReLU()
         self.prelu_act2 = nn.PReLU()
         self.prelu_act3 = nn.PReLU()
         self.network_type = network_type
+        self.mixed = mixed
 
     def forward(self, x):
         x = self.prelu_act1(self.pool(self.batch_norm1(self.conv1_2(self.conv1_1(x)))))
@@ -81,6 +95,15 @@ class LeNet_pp(nn.Module):
         else:
             y = self.fc1(x)
             x = self.fc2(y)
+        
+        if self.mixed:
+            if self.network_type == "single_fc":
+                x2 = self.single_fc_ood(y)
+            elif self.network_type == "single_fc_poslin":
+                x2 = self.single_fc_poslin_ood(y)
+            else:
+                x2 = self.fc2_ood(y)
+            return x, x2, y
         return x, y
 
 

@@ -9,10 +9,13 @@ from vast import tools
 from matplotlib import pyplot
 from matplotlib.backends.backend_pdf import PdfPages
 
-def load_network(arch, approach, net_type):
-    network_file = f"{arch}/{net_type}/{approach}/{approach}.model"
+def load_network(arch, approach, net_type, mixed=False):
+    if mixed:
+        network_file = f"{arch}/mixed/{net_type}/{approach}/{approach}.model"
+    else:
+        network_file = f"{arch}/{net_type}/{approach}/{approach}.model"
     if os.path.exists(network_file):
-        net = Networks.__dict__[arch](network_type=net_type, num_classes = 1 if approach == "OOD" else 10, bias = approach == "OOD" or net_type == "regular")
+        net = Networks.__dict__[arch](network_type=net_type, num_classes = 1 if approach == "OOD" else 10, bias = approach == "OOD" or net_type == "regular", mixed=mixed)
         net.load_state_dict(torch.load(network_file))
         tools.device(net)
         return net
@@ -32,9 +35,20 @@ def extract_features(dataset, net):
     return numpy.array(gt), numpy.array(features)
 
 
-def extract(dataset, net):
+def extract(dataset, net, mixed = False):
     gt, logits = [], []
     data_loader = torch.utils.data.DataLoader(dataset, batch_size=2048, shuffle=False)
+
+    if mixed:
+        logits_2 = []
+        with torch.no_grad():
+            for (x, y) in data_loader:
+                gt.extend(y.tolist())
+                logs, logs_2, feat = net(tools.device(x))
+                logits.extend(logs.tolist())
+                logits_2.extend(logs_2.tolist())
+        return numpy.array(gt), numpy.array(logits), numpy.array(logits_2)
+
 
     with torch.no_grad():
         for (x, y) in data_loader:
