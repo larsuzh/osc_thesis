@@ -117,6 +117,7 @@ def train(args):
                 y = tools.device(y)
                 logits, logits_2 ,features = net(x)
 
+                mask = y >= -1
                 if args.approach == "SoftMax":
                     mask = y >= 0
                     loss = first_loss_func(logits[mask], y[mask])
