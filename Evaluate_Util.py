@@ -29,7 +29,7 @@ def extract_features(dataset, net):
     with torch.no_grad():
         for (x, y) in data_loader:
             gt.extend(y.tolist())
-            logs, feat = net(tools.device(x))
+            feat = net(tools.device(x))[-1]
             features.extend(feat.tolist())
 
     return numpy.array(gt), numpy.array(features)

@@ -17,6 +17,7 @@ def command_line_options():
 
     parser.add_argument("--approach", choices=['SoftMax', 'OOD', 'EOS', 'Objectosphere'])
     parser.add_argument("--arch", default='LeNet_pp', choices=['LeNet', 'LeNet_pp'])
+    parser.add_argument("--mixed", default='False', choices=['False', 'True'])
     parser.add_argument("--net_type", default='regular', choices=['regular', 'single_fc', 'single_fc_poslin'])
     parser.add_argument("--dataset_root", "-d", default ="/tmp", help="Select the directory where datasets are stored.")
     parser.add_argument("--plot", "-p", default="Evaluate_Magnitudes.pdf", help = "Where to write results into")
@@ -33,7 +34,7 @@ if __name__ == '__main__':
         print("Running in CPU mode, might be slow")
         tools.set_device_cpu()
 
-    net = load_network(args.arch, args.approach, args.net_type)
+    net = load_network(args.arch, args.approach, args.net_type, mixed = args.mixed == "True")
 
     from Training import Dataset
 
@@ -46,14 +47,14 @@ if __name__ == '__main__':
     val_gt, val_features = extract_features(val_set, net)
     val_positives = val_features[val_gt >= 0]
     val_negatives = val_features[val_gt < 0]
-    val_magnitudes_positives = [round(sum(feature ** 2 for feature in features)/len(features), 3) for features in val_positives] # FIXME try using mean because sublist might be featuremap and not vector
-    val_magnitudes_negatives = [round(sum(feature ** 2 for feature in features)/len(features), 3) for features in val_negatives]
+    val_magnitudes_positives = [round(sum(feature ** 2 for feature in features)/len(features), 2) for features in val_positives]
+    val_magnitudes_negatives = [round(sum(feature ** 2 for feature in features)/len(features), 2) for features in val_negatives]
 
     test_gt, test_features = extract_features(test_set, net)
     test_positives = test_features[test_gt >= 0]
     test_negatives = test_features[test_gt < 0]
-    test_magnitudes_positives = [round(sum(feature ** 2 for feature in features)/len(features), 3) for features in test_positives]
-    test_magnitudes_negatives = [round(sum(feature ** 2 for feature in features)/len(features), 3) for features in test_negatives]
+    test_magnitudes_positives = [round(sum(feature ** 2 for feature in features)/len(features), 2) for features in test_positives]
+    test_magnitudes_negatives = [round(sum(feature ** 2 for feature in features)/len(features), 2) for features in test_negatives]
 
     pdf = PdfPages("Evaluation/" + args.plot)
 
@@ -66,11 +67,14 @@ if __name__ == '__main__':
 
         values_negative = sorted(list(set(val_magnitudes_negatives)))
         frequencies_negative = [val_magnitudes_negatives.count(value)/len(val_magnitudes_negatives) for value in values_negative]
-        pyplot.plot(values_negative, frequencies_negative, color='blue', linestyle='-')
+        max_frequency_positive = max(frequencies_positive)
+        max_frequency_negative = max(frequencies_negative)
+        pyplot.plot(values_negative, [freq * (max_frequency_positive / max_frequency_negative) for freq in frequencies_negative], color='blue', linestyle='-')
 
         pyplot.xlabel('values')
         pyplot.ylabel('freq')
         pyplot.title('validation set')
+        pyplot.xlim(min(values_negative), 3)
         pyplot.tight_layout()
         pdf.savefig(bbox_inches='tight', pad_inches=0)
 
@@ -82,12 +86,15 @@ if __name__ == '__main__':
 
         values_negative = sorted(list(set(test_magnitudes_negatives)))
         frequencies_negative = [test_magnitudes_negatives.count(value)/len(test_magnitudes_negatives) for value in values_negative]
-        pyplot.plot(values_negative, frequencies_negative, color='blue', linestyle='-')
+        max_frequency_positive = max(frequencies_positive)
+        max_frequency_negative = max(frequencies_negative)
+        pyplot.plot(values_negative, [freq * (max_frequency_positive / max_frequency_negative) for freq in frequencies_negative], color='blue', linestyle='-')
 
         pyplot.xlabel('values')
         pyplot.ylabel('freq')
         pyplot.title('test set')
         pyplot.tight_layout()
+        pyplot.xlim(min(values_negative), 3)
         pdf.savefig(bbox_inches='tight', pad_inches=0)
 
     finally:
