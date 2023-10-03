@@ -1,10 +1,12 @@
 import torch
 import sys
+import os
+import numpy
+import Networks
 import matplotlib
 matplotlib.rcParams["font.size"] = 18
 
 from vast import tools
-from Evaluate_Util import extract_features, load_network
 from matplotlib import pyplot
 from matplotlib.backends.backend_pdf import PdfPages
 
@@ -24,6 +26,35 @@ def command_line_options():
     parser.add_argument("--gpu", "-g", type=int, nargs="?", const=0, help="If selected, the experiment is run on GPU. You can also specify a GPU index")
 
     return parser.parse_args()
+
+
+def extract_features(dataset, net):
+    gt, features = [], []
+    data_loader = torch.utils.data.DataLoader(dataset, batch_size=2048, shuffle=False)
+
+    with torch.no_grad():
+        for (x, y) in data_loader:
+            gt.extend(y.tolist())
+            feat = net(tools.device(x))[-1]
+            features.extend(feat.tolist())
+
+    return numpy.array(gt), numpy.array(features)
+
+
+
+def load_network(arch, approach, net_type, mixed=False):
+    if mixed:
+        network_file = f"{arch}/mixed/{net_type}/{approach}/{approach}.model"
+    else:
+        network_file = f"{arch}/{net_type}/{approach}/{approach}.model"
+    if os.path.exists(network_file):
+        net = Networks.__dict__[arch](network_type=net_type, num_classes = 1 if approach == "OOD" else 10, bias = approach == "OOD" or net_type == "regular", mixed=mixed)
+        net.load_state_dict(torch.load(network_file))
+        tools.device(net)
+        return net
+    else:
+        return None
+
 
 if __name__ == '__main__':
 

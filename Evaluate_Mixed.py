@@ -1,81 +1,65 @@
 import torch
 import numpy
+import os
+import Networks
 
+from Evaluate import Evaluate
 from vast import tools
-from Evaluate_Util import extract, load_network, writeOSCRCurve
 
-labels={
-  "SoftMax" : "Plain SoftMax",
-  "EOS" : "Entropic Open-Set",
-  "Objectosphere" : "Objectosphere"
-}
+class Evaluate_Mixed(Evaluate):
+    def __init__(self):
+        super().__init__()
 
 
-def command_line_options():
-    import argparse
+    def load_network(self, approach):
+        network_file = f"{self.args.arch}/mixed/{self.args.net_type}/{approach}/{approach}.model"
+        if os.path.exists(network_file):
+            net = Networks.__dict__[self.args.arch](network_type = self.args.net_type, bias = self.args.net_type == "regular", mixed=True)
+            net.load_state_dict(torch.load(network_file))
+            tools.device(net)
+            return net
+        else:
+            return None
+        
+    
+    def extract(self, dataset, net):
+        gt, logits, logits_2 = [], [], []
+        data_loader = torch.utils.data.DataLoader(dataset, batch_size=2048, shuffle=False)
 
-    parser = argparse.ArgumentParser(
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-    )
+        with torch.no_grad():
+            for (x, y) in data_loader:
+                gt.extend(y.tolist())
+                logs, logs_2, _ = net(tools.device(x))
+                logits.extend(logs.tolist())
+                logits_2.extend(logs_2.tolist())
+        return numpy.array(gt), numpy.array(logits), numpy.array(logits_2)
+    
 
-    parser.add_argument("--approaches", "-a", nargs="+", default=list(labels.keys()), choices=list(labels.keys()), help = "Select the approaches to evaluate; non-existing models will automatically be skipped")
-    parser.add_argument("--net_type", default='regular', choices=['regular', 'single_fc', 'single_fc_poslin'])
-    parser.add_argument("--dataset_root", "-d", default ="/tmp", help="Select the directory where datasets are stored.")
-    parser.add_argument("--plot", "-p", default="Evaluate.pdf", help = "Where to write results into")
-    parser.add_argument("--gpu", "-g", type=int, nargs="?", const=0, help="If selected, the experiment is run on GPU. You can also specify a GPU index")
+    def evaluate(self):
+        for which, net in self.trained_networks.items():
+            if net is None:
+                continue
+            print ("Evaluating mixed", which)
 
-    return parser.parse_args()
+            val_gt, val_predicted, val_predicted_bc = self.extract(self.val_set, net)
+            test_gt, test_predicted, test_predicted_bc = self.extract(self.test_set, net)
+
+            
+            val_predicted = torch.nn.functional.softmax(torch.tensor(val_predicted), dim=1).detach().numpy()
+            test_predicted  = torch.nn.functional.softmax(torch.tensor(test_predicted), dim=1).detach().numpy()
+            val_predicted_bc = torch.sigmoid(torch.tensor(val_predicted_bc)).detach().numpy()
+            test_predicted_bc = torch.sigmoid(torch.tensor(test_predicted_bc)).detach().numpy()
+
+            positives = val_predicted[val_gt != -1] * val_predicted_bc[val_gt != -1]
+            val = val_predicted[val_gt == -1] * val_predicted_bc[val_gt == -1]
+            test = test_predicted[test_gt == -1] * val_predicted_bc[val_gt == -1]
+            gt = val_gt[val_gt != -1]
+
+            self.calculate_results(which, positives, val, test, gt)
+        
+        self.writeOSCRCurve()
+
 
 if __name__ == '__main__':
-
-    args = command_line_options()
-    if torch.cuda.is_available():
-            tools.set_device_gpu(args.gpu if args.gpu is not None else 0)
-    else:
-        print("Running in CPU mode, might be slow")
-        tools.set_device_cpu()
-
-    from Training import Dataset as Dataset
-
-    val_set = Dataset(args.dataset_root, "validation")
-    test_set = Dataset(args.dataset_root, "test")
-
-    results = {}
-    trained_networks = {
-        which: load_network("LeNet_pp", which, args.net_type, mixed=True) for which in args.approaches
-    }
-
-    results = {}
-    for which, net in trained_networks.items():
-        if net is None:
-            continue
-        print ("Evaluating mixed", which)
-
-        val_gt, val_predicted_sm, val_predicted_bc = extract(val_set, net, mixed = True)
-        test_gt, test_predicted_sm, test_predicted_bc = extract(test_set, net, mixed = True)
-
-        # compute probabilities
-        val_predicted_sm = torch.nn.functional.softmax(torch.tensor(val_predicted_sm), dim=1).detach().numpy()
-        test_predicted_sm  = torch.nn.functional.softmax(torch.tensor(test_predicted_sm), dim=1).detach().numpy()
-        val_predicted_bc = torch.sigmoid(torch.tensor(val_predicted_bc)).detach().numpy()
-        test_predicted_bc = torch.sigmoid(torch.tensor(test_predicted_bc)).detach().numpy()
-
-        # vary thresholds
-        ccr, fprv, fprt = [], [], []
-        positives = val_predicted_sm[val_gt != -1] * val_predicted_bc[val_gt != -1]
-        val = val_predicted_sm[val_gt == -1] * val_predicted_bc[val_gt == -1]
-        test = test_predicted_sm[test_gt == -1] * val_predicted_bc[val_gt == -1]
-        gt = val_gt[val_gt != -1]
-        for tau in sorted(positives[range(len(gt)),gt]):
-            # correct classification rate
-            ccr.append(numpy.sum(numpy.logical_and(
-                numpy.argmax(positives, axis=1) == gt,
-                positives[range(len(gt)),gt] >= tau
-            )) / len(positives))
-            # false positive rate for validation and test set
-            fprv.append(numpy.sum(numpy.max(val, axis=1) >= tau) / len(val))
-            fprt.append(numpy.sum(numpy.max(test, axis=1) >= tau) / len(test))
-
-        results[which] = (ccr, fprv, fprt)
-
-    writeOSCRCurve(results, labels, args.plot)
+    e = Evaluate_Mixed()
+    e.evaluate()
