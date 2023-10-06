@@ -2,6 +2,7 @@ import torch
 import sys
 from torch.nn import functional as F
 import torch.nn as nn
+import pathlib
 
 from vast import tools
 import Metrics
@@ -24,6 +25,10 @@ class Training_Mixed(Training):
 
     def train(self):
         torch.manual_seed(0)
+
+        results_dir = pathlib.Path(f"{self.args.arch}/mixed/{self.args.net_type}/{self.args.approach}")
+        model_file = f"{results_dir}/{self.args.approach}.model"
+        results_dir.mkdir(parents=True, exist_ok=True)
 
         # train network
         prev_confidence = None
@@ -84,7 +89,7 @@ class Training_Mixed(Training):
             # save network based on confidence metric of validation set
             save_status = "NO"
             if prev_confidence is None or (val_confidence[0] > prev_confidence):
-                torch.save(self.net.state_dict(), self.model_file)
+                torch.save(self.net.state_dict(), model_file)
                 prev_confidence = val_confidence[0]
                 save_status = "YES"
 

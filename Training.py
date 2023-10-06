@@ -18,10 +18,6 @@ class Training:
         self.set_gpu()
         self.is_ood = self.args.approach == "OOD"
 
-        self.results_dir = pathlib.Path(f"{self.args.arch}/{self.args.net_type}/{self.args.approach}")
-        self.model_file = f"{self.results_dir}/{self.args.approach}.model"
-        self.results_dir.mkdir(parents=True, exist_ok=True)
-
         self.first_loss_func, self.second_loss_func, self.training_data, self.validation_data = list(zip(*self.get_loss_functions().items()))[-1]
 
         self.net = Networks.__dict__[self.args.arch](network_type=self.args.net_type, num_classes = 1 if self.is_ood else 10, bias = self.is_ood)
@@ -115,6 +111,10 @@ class Training:
     def train(self):
         torch.manual_seed(0)
 
+        results_dir = pathlib.Path(f"{self.args.arch}/{self.args.net_type}/{self.args.approach}")
+        model_file = f"{results_dir}/{self.args.approach}.model"
+        results_dir.mkdir(parents=True, exist_ok=True)
+
         # train network
         prev_confidence = None
         for epoch in range(1, self.args.no_of_epochs + 1, 1):
@@ -180,7 +180,7 @@ class Training:
             # save network based on confidence metric of validation set
             save_status = "NO"
             if prev_confidence is None or (val_confidence[0] > prev_confidence):
-                torch.save(self.net.state_dict(), self.model_file)
+                torch.save(self.net.state_dict(), model_file)
                 prev_confidence = val_confidence[0]
                 save_status = "YES"
 
