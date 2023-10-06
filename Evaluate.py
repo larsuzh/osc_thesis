@@ -55,7 +55,7 @@ class Evaluate:
     def load_network(self, approach):
         network_file = f"{self.args.arch}/{self.args.net_type}/{approach}/{approach}.model"
         if os.path.exists(network_file):
-            net = Networks.__dict__[self.args.arch](network_type=self.args.net_type, num_classes = 1 if approach == "OOD" else 10, bias = approach == "OOD" or self.args.net_type == "regular")
+            net = Networks.__dict__[self.args.arch](network_type=self.args.net_type, num_classes = 1 if approach == "OOD" else 10, bias = approach == "OOD")
             net.load_state_dict(torch.load(network_file))
             tools.device(net)
             return net

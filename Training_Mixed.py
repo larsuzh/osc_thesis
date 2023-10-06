@@ -18,7 +18,7 @@ class Training_Mixed(Training):
             print("Invalid arguments!")
             sys.exit()
         self.third_loss_func = nn.BCEWithLogitsLoss()
-        self.net = Networks.__dict__[self.args.arch](network_type=self.args.net_type, bias = self.args.net_type == "regular", mixed = True)
+        self.net = Networks.__dict__[self.args.arch](network_type=self.args.net_type, mixed = True)
         self.net = tools.device(self.net)
 
 

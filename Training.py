@@ -24,7 +24,7 @@ class Training:
 
         self.first_loss_func, self.second_loss_func, self.training_data, self.validation_data = list(zip(*self.get_loss_functions().items()))[-1]
 
-        self.net = Networks.__dict__[self.args.arch](network_type=self.args.net_type, num_classes = 1 if self.is_ood else 10, bias = self.is_ood or self.args.net_type == "regular")
+        self.net = Networks.__dict__[self.args.arch](network_type=self.args.net_type, num_classes = 1 if self.is_ood else 10, bias = self.is_ood)
         self.net = tools.device(self.net)
         
         self.train_data_loader = torch.utils.data.DataLoader(

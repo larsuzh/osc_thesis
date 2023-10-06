@@ -2,7 +2,7 @@ import torch.nn as nn
 import torch
 
 class LeNet_pp(nn.Module):
-    def __init__(self, network_type="regular", num_classes=10, bias=True, mixed=False):
+    def __init__(self, network_type="regular", num_classes=10, bias=False, mixed=False):
         super(LeNet_pp, self).__init__()
         self.conv1_1 = nn.Conv2d(
             in_channels=1, out_channels=32, kernel_size=(5, 5), stride=1, padding=2
@@ -109,7 +109,7 @@ class LeNet_pp(nn.Module):
 
     
 class LeNet(nn.Module):
-    def __init__(self, network_type="regular", num_classes=10, bias=True):
+    def __init__(self, network_type="regular", num_classes=10, bias=False):
         super(LeNet, self).__init__()
         self.conv1 = nn.Conv2d(
             in_channels=1, out_channels=20, kernel_size=(5, 5), stride=1, padding=2
@@ -124,9 +124,9 @@ class LeNet(nn.Module):
         )
 
         self.fc1 = nn.Linear(
-            in_features=self.conv2.out_channels * 7 * 7, out_features=500, bias=True
+            in_features=self.conv2.out_channels * 7 * 7, out_features=500, bias=bias
         )
-        self.fc2 = nn.Linear(in_features=500, out_features=num_classes, bias=True)
+        self.fc2 = nn.Linear(in_features=500, out_features=num_classes, bias=bias)
 
         self.single_fc = nn.Linear(
             in_features=self.conv2.out_channels * 7 * 7, out_features=num_classes, bias=bias
@@ -155,7 +155,7 @@ class LeNet(nn.Module):
         return x, y
     
 class PosLinear(nn.Module):
-    def __init__(self, in_features, out_features, input_bias=True):
+    def __init__(self, in_features, out_features, input_bias=False):
         super(PosLinear, self).__init__()
         self.weight = nn.Parameter(nn.init.xavier_normal_(torch.empty(in_features, out_features)))
         

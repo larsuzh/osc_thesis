@@ -48,7 +48,7 @@ def load_network(arch, approach, net_type, mixed=False):
     else:
         network_file = f"{arch}/{net_type}/{approach}/{approach}.model"
     if os.path.exists(network_file):
-        net = Networks.__dict__[arch](network_type=net_type, num_classes = 1 if approach == "OOD" else 10, bias = approach == "OOD" or net_type == "regular", mixed=mixed)
+        net = Networks.__dict__[arch](network_type=net_type, num_classes = 1 if approach == "OOD" else 10, bias = approach == "OOD", mixed=mixed)
         net.load_state_dict(torch.load(network_file))
         tools.device(net)
         return net
