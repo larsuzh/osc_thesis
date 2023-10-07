@@ -1,10 +1,15 @@
 import torch
+import Networks
 from Evaluate import Evaluate
+from vast import tools
 
 class Evaluate_OOD(Evaluate):
     def __init__(self):
         super().__init__()
-        self.ood_net = self.load_network("OOD")
+        network_file = f"LeNet_pp/single_fc_poslin/OOD/OOD.model"
+        self.ood_net = Networks.__dict__["LeNet_pp"](network_type="single_fc_poslin", num_classes = 1 , bias = True)
+        self.ood_net.load_state_dict(torch.load(network_file))
+        tools.device(self.ood_net)
     
     
     def evaluate(self):
