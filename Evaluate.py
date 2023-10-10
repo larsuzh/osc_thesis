@@ -32,7 +32,7 @@ class Evaluate:
 
         parser.add_argument("--approaches", "-a", nargs="+", default=list(self.labels.keys()), choices=list(self.labels.keys()), help = "Select the approaches to evaluate; non-existing models will automatically be skipped")
         parser.add_argument("--arch", default='LeNet_pp', choices=['LeNet', 'LeNet_pp'])
-        parser.add_argument("--net_type", default='regular', choices=['regular', 'single_fc', 'single_fc_poslin'])
+        parser.add_argument("--net_type", default='regular', choices=['regular', 'single_fc', 'single_fc_poslin', 'double_fc', 'double_fc_poslin'])
         parser.add_argument("--dataset_root", "-d", default ="/tmp", help="Select the directory where datasets are stored.")
         parser.add_argument("--plot", "-p", default="Evaluate.pdf", help = "Where to write results into")
         parser.add_argument("--gpu", "-g", type=int, nargs="?", const=0, help="If selected, the experiment is run on GPU. You can also specify a GPU index")
