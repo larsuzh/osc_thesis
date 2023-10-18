@@ -213,6 +213,10 @@ def train(args):
             torch.save(net.state_dict(), model_file)
             prev_confidence = val_confidence[0]
             save_status = "YES"
+            i = 0
+        i += 1
+        if i > 9:
+            return
 
         # print some statistics
         val_loss_to_print = epoch_running_val_loss if is_ood else float(val_loss[0]) / float(val_loss[1])
