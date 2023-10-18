@@ -215,7 +215,7 @@ def train(args):
             save_status = "YES"
             i = 0
         i += 1
-        if i > 9:
+        if i > 11:
             return
 
         # print some statistics
