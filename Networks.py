@@ -120,51 +120,63 @@ class LeNet_pp(nn.Module):
 
 
     
-# class LeNet(nn.Module):
-#     def __init__(self, network_type="regular", num_classes=10, bias=False):
-#         super(LeNet, self).__init__()
-#         self.conv1 = nn.Conv2d(
-#             in_channels=1, out_channels=20, kernel_size=(5, 5), stride=1, padding=2
-#         )
-#         self.pool = nn.MaxPool2d(kernel_size=(2, 2), stride=2)
-#         self.conv2 = nn.Conv2d(
-#             in_channels=self.conv1.out_channels,
-#             out_channels=50,
-#             kernel_size=(5, 5),
-#             stride=1,
-#             padding=2,
-#         )
+class LeNet(nn.Module):
+    def __init__(self, network_type="regular", num_classes=10, bias=False):
+        super(LeNet, self).__init__()
+        self.conv1 = nn.Conv2d(
+            in_channels=1, out_channels=20, kernel_size=(5, 5), stride=1, padding=2
+        )
+        self.pool = nn.MaxPool2d(kernel_size=(2, 2), stride=2)
+        self.conv2 = nn.Conv2d(
+            in_channels=self.conv1.out_channels,
+            out_channels=50,
+            kernel_size=(5, 5),
+            stride=1,
+            padding=2,
+        )
 
-#         self.fc1 = nn.Linear(
-#             in_features=self.conv2.out_channels * 7 * 7, out_features=500, bias=bias
-#         )
-#         self.fc2 = nn.Linear(in_features=500, out_features=num_classes, bias=bias)
+        self.fc1 = nn.Linear(
+            in_features=self.conv2.out_channels * 7 * 7, out_features=500, bias=bias
+        )
+        self.fc2 = nn.Linear(in_features=500, out_features=num_classes, bias=bias)
 
-#         self.single_fc = nn.Linear(
-#             in_features=self.conv2.out_channels * 7 * 7, out_features=num_classes, bias=bias
-#             )
+        self.single_fc = nn.Linear(
+            in_features=self.conv2.out_channels * 7 * 7, out_features=num_classes, bias=bias
+            )
         
-#         self.single_fc_poslin = PosLinear(
-#             in_features=self.conv2.out_channels * 7 * 7, out_features=num_classes, input_bias=bias
-#             )
+        self.single_fc_poslin = PosLinear(
+            in_features=self.conv2.out_channels * 7 * 7, out_features=num_classes, input_bias=bias
+            )
         
-#         self.relu_act = nn.ReLU()
-#         self.network_type = network_type
+        self.double_fc_poslin = PosLinear(
+            in_features=500, out_features=num_classes, input_bias=bias
+            )
+        
+        self.relu_act = nn.ReLU()
+        self.network_type = network_type
 
-#     def forward(self, x):
-#         x = self.pool(self.relu_act(self.conv1(x)))
-#         x = self.pool(self.relu_act(self.conv2(x)))
-#         x = x.view(-1, self.conv2.out_channels * 7 * 7)
-#         if self.network_type == "single_fc":
-#             y = nn.functional.relu(x)
-#             x = self.single_fc(y)
-#         elif self.network_type == "single_fc_poslin":
-#             y = nn.functional.relu(x)
-#             x = self.single_fc_poslin(y) 
-#         else:
-#             y = self.fc1(x)
-#             x = self.fc2(y)
-#         return x, y
+    def forward(self, x):
+        x = self.pool(self.relu_act(self.conv1(x)))
+        x = self.pool(self.relu_act(self.conv2(x)))
+        x = x.view(-1, self.conv2.out_channels * 7 * 7)
+        if self.network_type == "single_fc":
+            y = nn.functional.relu(x)
+            x = self.single_fc(y)
+        elif self.network_type == "single_fc_poslin":
+            y = nn.functional.relu(x)
+            x = self.single_fc_poslin(y)
+        elif self.network_type == "double_fc":
+            y = self.fc1(x)
+            y = nn.functional.relu(y)
+            x = self.fc2(y)
+        elif self.network_type == "double_fc_poslin":
+            y = self.fc1(x)
+            y = nn.functional.relu(y)
+            x = self.double_fc_poslin(y)
+        else:
+            y = self.fc1(x)
+            x = self.fc2(y)
+        return x, y
     
 class PosLinear(nn.Module):
     def __init__(self, in_features, out_features, input_bias=False):
