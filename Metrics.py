@@ -2,13 +2,13 @@ import torch
 
 
 def accuracy(prediction, target, is_ood=False):
-    if is_ood:
-        predictions = (prediction >= 0).int()
-        correct = torch.sum(predictions == target).item()
-        total = len(target)
-        return torch.tensor((correct, total))
-    
     with torch.no_grad():
+        if is_ood:
+            predictions = (prediction >= 0).int()
+            correct = torch.sum(predictions == target).item()
+            total = len(target)
+            return torch.tensor((correct, total))
+        
         known = target >= 0
         total = torch.sum(known, dtype=int)
         if total:
