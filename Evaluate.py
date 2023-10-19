@@ -3,6 +3,8 @@ import numpy
 import argparse
 import os
 import Networks
+import Metrics
+import bisect
 
 from vast import tools
 from Training import Dataset
@@ -121,6 +123,10 @@ class Evaluate:
 
         self.results[which] = (ccr, fprv, fprt)
 
+    def find_nearest(self, fpr, t):
+        fpr = numpy.asarray(fpr)
+        return (numpy.abs(fpr - t)).argmin()
+
     def evaluate(self):
         for which, net in self.trained_networks.items():
             if net is None:
@@ -128,7 +134,12 @@ class Evaluate:
             print ("Evaluating", which)
 
             val_gt, val_predicted = self.extract(self.val_set, net)
+
             test_gt, test_predicted = self.extract(self.test_set, net)
+            test_acc = Metrics.accuracy(torch.from_numpy(test_predicted), torch.from_numpy(test_gt))
+            test_conf = Metrics.confidence(torch.from_numpy(test_predicted), torch.from_numpy(test_gt))
+            print(f"test accuracy {float(test_acc[0]) / float(test_acc[1]):.5f} "
+                  f"test confidence {float(test_conf[0]) / float(test_conf[1]):.5f} ")
 
             val_predicted = torch.nn.functional.softmax(torch.tensor(val_predicted), dim=1).detach().numpy()
             test_predicted  = torch.nn.functional.softmax(torch.tensor(test_predicted), dim=1).detach().numpy()
@@ -139,6 +150,8 @@ class Evaluate:
             gt = val_gt[val_gt != -1]
 
             self.calculate_results(which, positives, val, test, gt)
+            for t in [0.001, 0.01, 0.1, 1]:
+                print("fpr: ", t, "ccr: ", self.results[which][0][self.find_nearest(self.results[which][2], t)])
         
         self.writeOSCRCurve()
 
