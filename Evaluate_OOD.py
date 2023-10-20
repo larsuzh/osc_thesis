@@ -6,8 +6,8 @@ from vast import tools
 class Evaluate_OOD(Evaluate):
     def __init__(self):
         super().__init__()
-        network_file = f"LeNet_pp/single_fc_poslin/OOD/OOD.model"
-        self.ood_net = Networks.__dict__["LeNet_pp"](network_type="single_fc_poslin", num_classes = 1 , bias = True)
+        network_file = f"LeNet_pp/regular/OOD/OOD.model"
+        self.ood_net = Networks.__dict__["LeNet_pp"](network_type="regular", num_classes = 1 , bias = True)
         self.ood_net.load_state_dict(torch.load(network_file))
         tools.device(self.ood_net)
     
@@ -35,6 +35,8 @@ class Evaluate_OOD(Evaluate):
             gt = val_gt[val_gt != -1]
 
             self.calculate_results(which, positives, val, test, gt)
+            for t in [0.001, 0.01, 0.1, 1]:
+                print("fpr: ", t, "ccr: ", self.results[which][0][self.find_nearest(self.results[which][2], t)])
         
         self.writeOSCRCurve()
 
