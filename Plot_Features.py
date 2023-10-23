@@ -19,7 +19,7 @@ def command_line_options():
 
     parser.add_argument("--approach", choices=['SoftMax', 'OOD', 'EOS', 'Objectosphere'])
     parser.add_argument("--arch", default='LeNet_pp', choices=['LeNet', 'LeNet_pp'])
-    parser.add_argument("--net_type", default='regular', choices=['regular', 'double_fc', 'double_fc_poslin'])
+    parser.add_argument("--net_type", default='regular', choices=['regular', 'single_fc', 'single_fc_poslin', 'double_fc', 'double_fc_poslin'])
     parser.add_argument("--dataset_root", "-d", default ="/tmp", help="Select the directory where datasets are stored.")
     parser.add_argument("--plot", "-p", default="Evaluate_Magnitudes.pdf", help = "Where to write results into")
     parser.add_argument("--gpu", "-g", type=int, nargs="?", const=0, help="If selected, the experiment is run on GPU. You can also specify a GPU index")
@@ -84,18 +84,18 @@ if __name__ == '__main__':
         pyplot.figure()
         x_values = [feature[0] for feature in val_features]
         y_values = [feature[1] for feature in val_features]
-        pyplot.scatter(x_values, y_values, c=val_gt, cmap=cmap, marker='o', alpha=0.3)
-        pyplot.xlabel('X-axis')
-        pyplot.ylabel('Y-axis')
-        pyplot.title('2D Scatter Plot')
+        if args.approach == "OOD":
+            pyplot.scatter(x_values, y_values, c=[1 if val >= 0 else 0 for val in val_gt], cmap=cmap, marker='o', alpha=0.3)
+        else:
+            pyplot.scatter(x_values, y_values, c=test_gt, cmap=cmap, marker='o', alpha=0.3)
         pdf.savefig(bbox_inches='tight', pad_inches=0)
         pyplot.figure()
         x_values = [feature[0] for feature in test_features]
         y_values = [feature[1] for feature in test_features]
-        pyplot.scatter(x_values, y_values, c=test_gt, cmap=cmap, marker='o', alpha=0.3)
-        pyplot.xlabel('X-axis')
-        pyplot.ylabel('Y-axis')
-        pyplot.title('2D Scatter Plot')
+        if args.approach == "OOD":
+            pyplot.scatter(x_values, y_values, c=[1 if val >= 0 else 0 for val in val_gt], cmap=cmap, marker='o', alpha=0.3)
+        else:
+            pyplot.scatter(x_values, y_values, c=test_gt, cmap=cmap, marker='o', alpha=0.3)
         pdf.savefig(bbox_inches='tight', pad_inches=0)
 
     finally:
