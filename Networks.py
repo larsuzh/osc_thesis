@@ -121,7 +121,7 @@ class LeNet_pp(nn.Module):
 
     
 class LeNet(nn.Module):
-    def __init__(self, network_type="regular", num_classes=10, bias=False):
+    def __init__(self, network_type="regular", num_classes=10, bias=False, mixed=False):
         super(LeNet, self).__init__()
         self.conv1 = nn.Conv2d(
             in_channels=1, out_channels=20, kernel_size=(5, 5), stride=1, padding=2
@@ -152,8 +152,22 @@ class LeNet(nn.Module):
             in_features=500, out_features=num_classes, input_bias=bias
             )
         
+        if mixed:
+            self.fc2_ood = nn.Linear(
+                in_features=500, out_features=1, bias=True
+            )
+
+            self.single_fc_ood = nn.Linear(
+                in_features=self.conv2.out_channels * 7 * 7, out_features=1, bias=True
+            )
+
+            self.single_fc_poslin_ood = PosLinear(
+                in_features=self.conv2.out_channels * 7 * 7, out_features=1, input_bias=True
+            )
+        
         self.relu_act = nn.ReLU()
         self.network_type = network_type
+        self.mixed = mixed
 
     def forward(self, x):
         x = self.pool(self.relu_act(self.conv1(x)))
@@ -176,6 +190,15 @@ class LeNet(nn.Module):
         else:
             y = self.fc1(x)
             x = self.fc2(y)
+
+        if self.mixed:
+            if self.network_type == "single_fc":
+                x2 = self.single_fc_ood(y)
+            elif self.network_type == "single_fc_poslin":
+                x2 = self.single_fc_poslin_ood(y)
+            else:
+                x2 = self.fc2_ood(y)
+            return x, x2, y
         return x, y
     
 class PosLinear(nn.Module):

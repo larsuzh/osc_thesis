@@ -143,6 +143,10 @@ def train(args):
             torch.save(net.state_dict(), model_file)
             prev_confidence = val_confidence[0]
             save_status = "YES"
+            i = 0
+        i += 1
+        if i > 11:
+            return
 
         # print some statistics
         print(f"Epoch {epoch} "
