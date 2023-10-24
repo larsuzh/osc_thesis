@@ -56,6 +56,8 @@ class Evaluate_Mixed(Evaluate):
             gt = val_gt[val_gt != -1]
 
             self.calculate_results(which, positives, val, test, gt)
+            for t in [0.001, 0.01, 0.1, 1]:
+                print("fpr: ", t, "ccr: ", self.results[which][0][self.find_nearest(self.results[which][2], t)])
         
         self.writeOSCRCurve()
 
