@@ -18,9 +18,9 @@ def command_line_options():
     )
 
     parser.add_argument("--approach", choices=['SoftMax', 'OOD', 'EOS', 'Objectosphere'])
-    parser.add_argument("--arch", default='LeNet_pp', choices=['LeNet', 'LeNet_pp'])
+    parser.add_argument("--arch", default='LeNet', choices=['LeNet', 'LeNet_pp'])
     parser.add_argument("--mixed", default='False', choices=['False', 'True'])
-    parser.add_argument("--net_type", default='regular', choices=['regular', 'single_fc', 'single_fc_poslin'])
+    parser.add_argument("--net_type", default='regular', choices=['regular', 'single_fc', 'single_fc_poslin', 'double_fc', 'double_fc_poslin'])
     parser.add_argument("--dataset_root", "-d", default ="/tmp", help="Select the directory where datasets are stored.")
     parser.add_argument("--plot", "-p", default="Evaluate_Magnitudes.pdf", help = "Where to write results into")
     parser.add_argument("--gpu", "-g", type=int, nargs="?", const=0, help="If selected, the experiment is run on GPU. You can also specify a GPU index")
@@ -35,7 +35,10 @@ def extract_features(dataset, net):
     with torch.no_grad():
         for (x, y) in data_loader:
             gt.extend(y.tolist())
-            feat = net(tools.device(x))[-1]
+            if args.net_type in ['regular', 'double_fc', 'double_fc_poslin']:
+                feat = net(tools.device(x))[-1] #ToDo extract feature map for these networks
+            else:
+                feat = net(tools.device(x))[-1]
             features.extend(feat.tolist())
 
     return numpy.array(gt), numpy.array(features)
@@ -76,56 +79,60 @@ if __name__ == '__main__':
         sys.exit()
     
     val_gt, val_features = extract_features(val_set, net)
-    val_positives = val_features[val_gt >= 0]
-    val_negatives = val_features[val_gt < 0]
-    val_magnitudes_positives = [round(sum(feature ** 2 for feature in features)/len(features), 2) for features in val_positives]
-    val_magnitudes_negatives = [round(sum(feature ** 2 for feature in features)/len(features), 2) for features in val_negatives]
+    val_positives = numpy.array(val_features[val_gt >= 0])
+    val_negatives = numpy.array(val_features[val_gt < 0])
+    val_magnitudes_positives = numpy.round(numpy.sum(val_positives**2, axis=1) / val_positives.shape[1], 1)
+    val_magnitudes_negatives = numpy.round(numpy.sum(val_negatives**2, axis=1) / val_negatives.shape[1], 1)
 
     test_gt, test_features = extract_features(test_set, net)
-    test_positives = test_features[test_gt >= 0]
-    test_negatives = test_features[test_gt < 0]
-    test_magnitudes_positives = [round(sum(feature ** 2 for feature in features)/len(features), 2) for features in test_positives]
-    test_magnitudes_negatives = [round(sum(feature ** 2 for feature in features)/len(features), 2) for features in test_negatives]
+    test_positives = numpy.array(test_features[test_gt >= 0])
+    test_negatives = numpy.array(test_features[test_gt < 0])
+    test_magnitudes_positives = numpy.round(numpy.sum(test_positives**2, axis=1) / test_positives.shape[1] , 1)
+    test_magnitudes_negatives = numpy.round(numpy.sum(test_negatives**2, axis=1) / test_negatives.shape[1] , 1)
 
     pdf = PdfPages("Evaluation/" + args.plot)
 
     try:
         pyplot.figure()
         values_positive = sorted(list(set(val_magnitudes_positives)))
-        frequencies_positive = [val_magnitudes_positives.count(value)/len(val_magnitudes_positives) for value in values_positive]
+        frequencies_positive = [numpy.sum(val_magnitudes_positives == value)/len(val_magnitudes_positives) for value in values_positive]
 
         pyplot.plot(values_positive, frequencies_positive, color='red', linestyle='-')
 
         values_negative = sorted(list(set(val_magnitudes_negatives)))
-        frequencies_negative = [val_magnitudes_negatives.count(value)/len(val_magnitudes_negatives) for value in values_negative]
+        frequencies_negative = [numpy.sum(val_magnitudes_negatives == value)/len(val_magnitudes_negatives) for value in values_negative]
         max_frequency_positive = max(frequencies_positive)
         max_frequency_negative = max(frequencies_negative)
         pyplot.plot(values_negative, [freq * (max_frequency_positive / max_frequency_negative) for freq in frequencies_negative], color='blue', linestyle='-')
+        pyplot.xscale('log')
+        pyplot.yscale('linear')
 
         pyplot.xlabel('values')
         pyplot.ylabel('freq')
+        pyplot.yticks([])
         pyplot.title('validation set')
-        pyplot.xlim(min(values_negative), 3)
         pyplot.tight_layout()
         pdf.savefig(bbox_inches='tight', pad_inches=0)
 
         pyplot.figure()
         values_positive = sorted(list(set(test_magnitudes_positives)))
-        frequencies_positive = [test_magnitudes_positives.count(value)/len(test_magnitudes_positives) for value in values_positive]
+        frequencies_positive = [numpy.sum(test_magnitudes_positives == value)/len(test_magnitudes_positives) for value in values_positive]
 
         pyplot.plot(values_positive, frequencies_positive, color='red', linestyle='-')
 
         values_negative = sorted(list(set(test_magnitudes_negatives)))
-        frequencies_negative = [test_magnitudes_negatives.count(value)/len(test_magnitudes_negatives) for value in values_negative]
+        frequencies_negative = [numpy.sum(test_magnitudes_negatives == value)/len(test_magnitudes_negatives) for value in values_negative]
         max_frequency_positive = max(frequencies_positive)
         max_frequency_negative = max(frequencies_negative)
         pyplot.plot(values_negative, [freq * (max_frequency_positive / max_frequency_negative) for freq in frequencies_negative], color='blue', linestyle='-')
+        pyplot.xscale('log')
+        pyplot.yscale('linear')
 
         pyplot.xlabel('values')
         pyplot.ylabel('freq')
+        pyplot.yticks([])
         pyplot.title('test set')
         pyplot.tight_layout()
-        pyplot.xlim(min(values_negative), 3)
         pdf.savefig(bbox_inches='tight', pad_inches=0)
 
     finally:
