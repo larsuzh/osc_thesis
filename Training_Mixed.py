@@ -82,7 +82,7 @@ def train(args):
             x = tools.device(x)
             y = tools.device(y)
             optimizer.zero_grad()
-            logits, logits_2 ,features = net(x)
+            logits, logits_2, features, _ = net(x)
 
 
             mask = y >= -1
@@ -115,7 +115,7 @@ def train(args):
             for x,y in val_data_loader:
                 x = tools.device(x)
                 y = tools.device(y)
-                logits, logits_2 ,features = net(x)
+                logits, logits_2, features, _ = net(x)
 
                 mask = y >= -1
                 if args.approach == "SoftMax":

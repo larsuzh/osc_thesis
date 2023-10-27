@@ -92,19 +92,24 @@ class LeNet_pp(nn.Module):
         x = x.view(-1, self.conv3_2.out_channels * 3 * 3)
         if self.network_type == "single_fc":
             y = nn.functional.relu(x)
+            featuremap = y
             x = self.single_fc(y)
         elif self.network_type == "single_fc_poslin":
             y = nn.functional.relu(x)
+            featuremap = y
             x = self.single_fc_poslin(y)
         elif self.network_type == "double_fc":
+            featuremap = x
             y = self.fc1(x)
             y = nn.functional.relu(y)
             x = self.fc2(y)
         elif self.network_type == "double_fc_poslin":
+            featuremap = x
             y = self.fc1(x)
             y = nn.functional.relu(y)
             x = self.double_fc_poslin(y)
         else:
+            featuremap = x
             y = self.fc1(x)
             x = self.fc2(y)
         
@@ -115,8 +120,8 @@ class LeNet_pp(nn.Module):
                 x2 = self.single_fc_poslin_ood(y)
             else:
                 x2 = self.fc2_ood(y)
-            return x, x2, y
-        return x, y
+            return x, x2, y, featuremap
+        return x, y, featuremap
 
 
     
@@ -175,19 +180,24 @@ class LeNet(nn.Module):
         x = x.view(-1, self.conv2.out_channels * 7 * 7)
         if self.network_type == "single_fc":
             y = nn.functional.relu(x)
+            featuremap = y
             x = self.single_fc(y)
         elif self.network_type == "single_fc_poslin":
             y = nn.functional.relu(x)
+            featuremap = y
             x = self.single_fc_poslin(y)
         elif self.network_type == "double_fc":
+            featuremap = x
             y = self.fc1(x)
             y = nn.functional.relu(y)
             x = self.fc2(y)
         elif self.network_type == "double_fc_poslin":
+            featuremap = x
             y = self.fc1(x)
             y = nn.functional.relu(y)
             x = self.double_fc_poslin(y)
         else:
+            featuremap = x
             y = self.fc1(x)
             x = self.fc2(y)
 
@@ -198,8 +208,8 @@ class LeNet(nn.Module):
                 x2 = self.single_fc_poslin_ood(y)
             else:
                 x2 = self.fc2_ood(y)
-            return x, x2, y
-        return x, y
+            return x, x2, y, featuremap
+        return x, y, featuremap
     
 class PosLinear(nn.Module):
     def __init__(self, in_features, out_features, input_bias=False):

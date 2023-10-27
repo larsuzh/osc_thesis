@@ -147,7 +147,7 @@ def train(args):
             x = tools.device(x)
             y = tools.device(y)
             optimizer.zero_grad()
-            logits, features = net(x)
+            logits, features, _ = net(x)
             if is_ood:
                 y = y.unsqueeze(1).float()
             loss = first_loss_func(logits, y) + args.second_loss_weight * second_loss_func(features, y)

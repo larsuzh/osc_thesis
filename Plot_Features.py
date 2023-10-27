@@ -34,7 +34,7 @@ def extract_features(dataset, net):
     with torch.no_grad():
         for (x, y) in data_loader:
             gt.extend(y.tolist())
-            feat = net(tools.device(x))[-1]
+            feat = net(tools.device(x))[-2]
             features.extend(feat.tolist())
 
     return numpy.array(gt), numpy.array(features)

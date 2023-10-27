@@ -35,10 +35,7 @@ def extract_features(dataset, net):
     with torch.no_grad():
         for (x, y) in data_loader:
             gt.extend(y.tolist())
-            if args.net_type in ['regular', 'double_fc', 'double_fc_poslin']:
-                feat = net(tools.device(x))[-1] #ToDo extract feature map for these networks
-            else:
-                feat = net(tools.device(x))[-1]
+            feat = net(tools.device(x))[-1]
             features.extend(feat.tolist())
 
     return numpy.array(gt), numpy.array(features)
@@ -81,14 +78,15 @@ if __name__ == '__main__':
     val_gt, val_features = extract_features(val_set, net)
     val_positives = numpy.array(val_features[val_gt >= 0])
     val_negatives = numpy.array(val_features[val_gt < 0])
-    val_magnitudes_positives = numpy.round(numpy.sum(val_positives**2, axis=1) / val_positives.shape[1], 1)
-    val_magnitudes_negatives = numpy.round(numpy.sum(val_negatives**2, axis=1) / val_negatives.shape[1], 1)
+    print(val_positives.shape[1])
+    val_magnitudes_positives = numpy.round(numpy.sum(val_positives**2, axis=1) / val_positives.shape[1], 3)
+    val_magnitudes_negatives = numpy.round(numpy.sum(val_negatives**2, axis=1) / val_negatives.shape[1], 3)
 
     test_gt, test_features = extract_features(test_set, net)
     test_positives = numpy.array(test_features[test_gt >= 0])
     test_negatives = numpy.array(test_features[test_gt < 0])
-    test_magnitudes_positives = numpy.round(numpy.sum(test_positives**2, axis=1) / test_positives.shape[1] , 1)
-    test_magnitudes_negatives = numpy.round(numpy.sum(test_negatives**2, axis=1) / test_negatives.shape[1] , 1)
+    test_magnitudes_positives = numpy.round(numpy.sum(test_positives**2, axis=1) / test_positives.shape[1] , 3)
+    test_magnitudes_negatives = numpy.round(numpy.sum(test_negatives**2, axis=1) / test_negatives.shape[1] , 3)
 
     pdf = PdfPages("Evaluation/" + args.plot)
 
