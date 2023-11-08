@@ -80,7 +80,7 @@ if __name__ == '__main__':
     pdf = PdfPages("Evaluation/" + args.plot)
 
     try:
-        cmap = pyplot.get_cmap("viridis")
+        cmap = pyplot.get_cmap("tab20")
         pyplot.figure()
         x_values = [feature[0] for feature in val_features]
         y_values = [feature[1] for feature in val_features]
