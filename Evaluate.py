@@ -72,7 +72,7 @@ class Evaluate:
         with torch.no_grad():
             for (x, y) in data_loader:
                 gt.extend(y.tolist())
-                logs, _ = net(tools.device(x))
+                logs, _, _= net(tools.device(x))
                 logits.extend(logs.tolist())
 
         return numpy.array(gt), numpy.array(logits)

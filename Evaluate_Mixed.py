@@ -30,7 +30,7 @@ class Evaluate_Mixed(Evaluate):
         with torch.no_grad():
             for (x, y) in data_loader:
                 gt.extend(y.tolist())
-                logs, logs_2, _ = net(tools.device(x))
+                logs, logs_2, _, _ = net(tools.device(x))
                 logits.extend(logs.tolist())
                 logits_2.extend(logs_2.tolist())
         return numpy.array(gt), numpy.array(logits), numpy.array(logits_2)
