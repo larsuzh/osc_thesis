@@ -2,6 +2,7 @@ import torch
 import numpy
 import os
 import Networks
+import Metrics
 
 from Evaluate import Evaluate
 from vast import tools
@@ -43,6 +44,10 @@ class Evaluate_Mixed(Evaluate):
 
             val_gt, val_predicted, val_predicted_bc = self.extract(self.val_set, net)
             test_gt, test_predicted, test_predicted_bc = self.extract(self.test_set, net)
+            test_acc = Metrics.accuracy(torch.from_numpy(test_predicted), torch.from_numpy(test_gt))
+            test_conf = Metrics.confidence(torch.from_numpy(test_predicted), torch.from_numpy(test_gt))
+            print(f"test accuracy {float(test_acc[0]) / float(test_acc[1]):.5f} "
+                  f"test confidence {float(test_conf[0]) / float(test_conf[1]):.5f} ")
 
             
             val_predicted = torch.nn.functional.softmax(torch.tensor(val_predicted), dim=1).detach().numpy()
