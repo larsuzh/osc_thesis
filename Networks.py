@@ -214,7 +214,7 @@ class LeNet(nn.Module):
 class PosLinear(nn.Module):
     def __init__(self, in_features, out_features, input_bias=False):
         super(PosLinear, self).__init__()
-        self.weight = nn.Parameter(nn.init.xavier_normal_(torch.empty(in_features, out_features)))
+        self.weight = nn.Parameter(torch.abs(nn.init.xavier_normal_(torch.empty(in_features, out_features))))
         
         if input_bias:
             self.bias = nn.Parameter(torch.zeros((out_features,)))
