@@ -20,7 +20,7 @@ def command_line_options():
     parser.add_argument("--approach", choices=['SoftMax', 'OOD', 'EOS', 'Objectosphere'])
     parser.add_argument("--arch", default='LeNet', choices=['LeNet', 'LeNet_pp'])
     parser.add_argument("--mixed", default='False', choices=['False', 'True'])
-    parser.add_argument("--net_type", default='regular', choices=['regular', 'single_fc', 'single_fc_poslin', 'double_fc', 'double_fc_poslin'])
+    parser.add_argument("--net_type", default='regular', choices=['regular', 'regular_single', 'single_fc', 'single_fc_poslin', 'double_fc', 'double_fc_poslin'])
     parser.add_argument("--dataset_root", "-d", default ="/tmp", help="Select the directory where datasets are stored.")
     parser.add_argument("--plot", "-p", default="Evaluate_Magnitudes.pdf", help = "Where to write results into")
     parser.add_argument("--gpu", "-g", type=int, nargs="?", const=0, help="If selected, the experiment is run on GPU. You can also specify a GPU index")
