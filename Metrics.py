@@ -5,7 +5,7 @@ def accuracy(prediction, target, is_ood=False):
     with torch.no_grad():
         if is_ood:
             predictions = (prediction >= 0).int()
-            correct = torch.sum(predictions == target).item()
+            correct = torch.sum(torch.eq(predictions, target))
             total = len(target)
             return torch.tensor((correct, total))
         
