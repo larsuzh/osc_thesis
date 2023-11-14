@@ -196,6 +196,10 @@ class LeNet(nn.Module):
             y = self.fc1(x)
             y = nn.functional.relu(y)
             x = self.double_fc_poslin(y)
+        elif self.network_type == "regular_single":
+            y = x
+            featuremap = x
+            x = self.single_fc(y)
         else:
             featuremap = x
             y = self.fc1(x)
@@ -206,6 +210,8 @@ class LeNet(nn.Module):
                 x2 = self.single_fc_ood(y)
             elif self.network_type == "single_fc_poslin":
                 x2 = self.single_fc_poslin_ood(y)
+            elif self.network_type == "regular_single":
+                x2 = self.single_fc_ood(y)
             else:
                 x2 = self.fc2_ood(y)
             return x, x2, y, featuremap

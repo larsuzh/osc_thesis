@@ -26,7 +26,7 @@ def command_line_options():
 
     parser.add_argument("--approach", "-a", required=True, choices=['SoftMax', 'OOD', 'EOS', 'Objectosphere'])
     parser.add_argument("--arch", default='LeNet_pp', choices=['LeNet', 'LeNet_pp'])
-    parser.add_argument("--net_type", default='regular', choices=['regular', 'single_fc', 'single_fc_poslin', 'double_fc', 'double_fc_poslin'])
+    parser.add_argument("--net_type", default='regular', choices=['regular', 'regular_single', 'single_fc', 'single_fc_poslin', 'double_fc', 'double_fc_poslin'])
     parser.add_argument('--second_loss_weight', "-w", help='Loss weight for Objectosphere loss', type=float, default=0.0001)
     parser.add_argument('--negative_penalty_weight', help='Penalty weight for negative weights in last layer', type=float, default=0)
     parser.add_argument('--Minimum_Knowns_Magnitude', "-m", help='Minimum Possible Magnitude for the Knowns', type=float,
