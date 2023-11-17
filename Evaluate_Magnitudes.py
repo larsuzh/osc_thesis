@@ -7,6 +7,7 @@ import matplotlib
 matplotlib.rcParams["font.size"] = 18
 
 from vast import tools
+from scipy import stats
 from matplotlib import pyplot
 from matplotlib.backends.backend_pdf import PdfPages
 
@@ -79,9 +80,9 @@ if __name__ == '__main__':
     val_positives = numpy.array(val_features[val_gt >= 0])
     val_negatives = numpy.array(val_features[val_gt < 0])
     val_magnitudes_positives = numpy.round(numpy.sum(val_positives**2, axis=1) / val_positives.shape[1], 3)
+    val_magnitudes_negatives = numpy.round(numpy.sum(val_negatives**2, axis=1) / val_negatives.shape[1], 3)
     print("val positives \n"
           "Mean: ", numpy.mean(val_magnitudes_positives), " Median: ", numpy.median(val_magnitudes_positives), " SD: ", numpy.std(val_magnitudes_positives))
-    val_magnitudes_negatives = numpy.round(numpy.sum(val_negatives**2, axis=1) / val_negatives.shape[1], 3)
     print("val negatives \n"
           "Mean: ", numpy.mean(val_magnitudes_negatives), " Median: ", numpy.median(val_magnitudes_negatives), " SD: ", numpy.std(val_magnitudes_negatives))
 
@@ -89,11 +90,13 @@ if __name__ == '__main__':
     test_positives = numpy.array(test_features[test_gt >= 0])
     test_negatives = numpy.array(test_features[test_gt < 0])
     test_magnitudes_positives = numpy.round(numpy.sum(test_positives**2, axis=1) / test_positives.shape[1] , 3)
+    test_magnitudes_negatives = numpy.round(numpy.sum(test_negatives**2, axis=1) / test_negatives.shape[1] , 3)
     print("test positives \n"
           "Mean: ", numpy.mean(test_magnitudes_positives), " Median: ", numpy.median(test_magnitudes_positives), " SD: ", numpy.std(test_magnitudes_positives))
-    test_magnitudes_negatives = numpy.round(numpy.sum(test_negatives**2, axis=1) / test_negatives.shape[1] , 3)
     print("test negatives \n"
           "Mean: ", numpy.mean(test_magnitudes_negatives), " Median: ", numpy.median(test_magnitudes_negatives), " SD: ", numpy.std(test_magnitudes_negatives))
+    print(stats.ttest_ind(val_magnitudes_negatives, val_magnitudes_positives, alternative='less'))
+    print(stats.ttest_ind(test_magnitudes_negatives, val_magnitudes_positives, alternative='less'))
 
     pdf = PdfPages("Evaluation/" + args.plot)
 
