@@ -1,6 +1,7 @@
 import torch
 import sys
 import os
+import json
 import numpy
 import Networks
 import matplotlib
@@ -97,6 +98,10 @@ if __name__ == '__main__':
           "Mean: ", numpy.mean(test_magnitudes_negatives), " Median: ", numpy.median(test_magnitudes_negatives), " SD: ", numpy.std(test_magnitudes_negatives))
     print(stats.ttest_ind(val_magnitudes_negatives, val_magnitudes_positives, alternative='less'))
     print(stats.ttest_ind(test_magnitudes_negatives, val_magnitudes_positives, alternative='less'))
+
+    with open("mixed_singlefc_objecto.json", 'w') as json_file:
+        json.dump(val_magnitudes_positives.tolist(), json_file)
+        json.dump(test_magnitudes_negatives.tolist(), json_file)
 
     pdf = PdfPages("Evaluation/" + args.plot)
 
