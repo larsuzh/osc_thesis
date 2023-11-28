@@ -231,7 +231,7 @@ class PosLinear(nn.Module):
         linear_result = torch.matmul(x, nn.functional.relu(self.weight))
         
         if self.bias is not None:
-            linear_result += nn.functional.relu(self.bias)
+            linear_result += self.bias
             
         return linear_result
     
