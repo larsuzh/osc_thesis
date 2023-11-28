@@ -1,6 +1,4 @@
 import torch
-import torchvision
-import torchvision.transforms as transforms
 from torch.nn import functional as F
 import torch.nn as nn
 import torch.optim as optim

@@ -4,7 +4,6 @@ import argparse
 import os
 import Networks
 import Metrics
-import bisect
 
 from vast import tools
 from Training import Dataset
@@ -90,7 +89,7 @@ class Evaluate:
             pyplot.xlabel("False Positive Rate")
             pyplot.ylabel("Correct Classification Rate")
             pyplot.title("Negative Set")
-            pyplot.ylim(0, 1)  # Set the y-axis limits from 0 to 1
+            pyplot.ylim(0, 1)
             pyplot.tight_layout()
             pdf.savefig(bbox_inches='tight', pad_inches=0)
 
@@ -102,7 +101,7 @@ class Evaluate:
             pyplot.xlabel("False Positive Rate")
             pyplot.ylabel("Correct Classification Rate")
             pyplot.title("Unknown Set")
-            pyplot.ylim(0, 1)  # Set the y-axis limits from 0 to 1
+            pyplot.ylim(0, 1)
             pyplot.tight_layout()
             pdf.savefig(bbox_inches='tight', pad_inches=0)
 

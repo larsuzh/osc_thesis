@@ -21,10 +21,6 @@ def accuracy(prediction, target, is_ood=False):
 
 
 def sphere(representation, target, sphere_radius=None, is_ood=False):
-    # FIXME
-    if is_ood:
-        return None
-
     with torch.no_grad():
         known = target >= 0
 
