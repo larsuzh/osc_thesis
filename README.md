@@ -20,7 +20,7 @@ Also, the `vast` package is installed from its [GitHub Source](https://github.co
 
 ## Data
 
-The scripts rely on the MNIST dataset and EMNIST letters, which we set to automatically download from `torchvision.datasets`.
+The scripts rely on the EMNIST digits and EMNIST letters, which we set to automatically download from `torchvision.datasets`.
 Currently, we follow the approach of using both Letters and MNIST from the EMNIST splits, removing extremely-similar letters (i, g, l, o).
 Hence, both negative and unknown classes contain 11 different letters each.
 
